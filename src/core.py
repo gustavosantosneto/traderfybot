@@ -3,18 +3,63 @@ from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 from conf.settings import BASE_API_URL, TELEGRAM_TOKEN
 
 import logging
+import schedule
+import time
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
-    level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    # level=logging.INFO
 )
+
+my_chat_id = ''
+context = ''
+started = False
+
+
+async def init(update, _context):
+    global started
+
+    if not started:
+        print('init')
+        global my_chat_id
+        global context
+
+    my_chat_id = update.effective_chat.id
+    context = _context
+
+    schedule.every(10).seconds.do(checkTrigger)
+
+    await run_schedule()
+
+    started = True
+
+
+async def run_schedule():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 
 def start(update, context):
-    response_message = "=^._.^="
+
+    if not started:
+        init(update, context)
+
+    response_message = "<b>=^._.^=</b>"
+
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=response_message
+        chat_id=my_chat_id,
+        text=response_message,
+        parse_mode="html"
+    )
+
+
+def checkTrigger():
+    print('checkTrigger')
+    context.bot.send_message(
+        chat_id=my_chat_id,
+        text="10 seconds message",
+        parse_mode='html'
     )
 
 
@@ -24,7 +69,7 @@ def http_cats(update, context):
             chat_id=update.effective_chat.id,
             photo=BASE_API_URL + context.args[0]
         )
-    else: 
+    else:
         context.bot.sendPhoto(
             chat_id=update.effective_chat.id,
             photo=BASE_API_URL + "100"
@@ -32,6 +77,9 @@ def http_cats(update, context):
 
 
 def unknown(update, context):
+    if not started:
+        init(update, context)
+
     response_message = "Meow? =^._.^="
     context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -40,7 +88,11 @@ def unknown(update, context):
 
 
 def echo(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+    if not started:
+        init(update, context)
+
+    context.bot.send_message(
+        chat_id=update.effective_chat.id, text=update.message.text)
 
 
 def main():
